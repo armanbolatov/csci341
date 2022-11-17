@@ -1,7 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import psycopg2
 import time
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
