@@ -159,10 +159,12 @@ if __name__ == '__main__':
     st.title(page_title + " " + page_icon)
 
     # creating PostgreSQL client
-    dbschema = "assignment"
+    db_schema = "assignment"
+    db_username = st.secrets['db_username']
+    db_password = st.secrets['db_password']
     engine = create_engine(
-        "postgresql://postgres:Qwerty123@127.0.0.1:5432/postgres",
-        connect_args={'options': f'-csearch_path={dbschema}'}
+        f"postgresql://{db_username}:{db_password}@127.0.0.1:5432/postgres",
+        connect_args={'options': f'-csearch_path={db_schema}'}
     )
     
     st.sidebar.write(
