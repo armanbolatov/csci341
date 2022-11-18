@@ -1,5 +1,7 @@
 from sqlalchemy import text, create_engine, inspect
 import pandas as pd
+from sqlalchemy.exc import SQLAlchemyError
+
 
 dbschema = "assignment"
 engine = create_engine(
@@ -44,7 +46,6 @@ def get_query2():
     return print(df)
 
 
-
 def get_query3():
     query = text(
         # List the name, surname and degree of doctors
@@ -77,6 +78,7 @@ def get_query4():
     )
     df = pd.read_sql(query, engine)
     return print(df)
+
 
 def get_query5():
     # List the departments of public servants who report “covid-19” cases
@@ -125,9 +127,9 @@ def get_query6():
     )
     try:
         engine.execute(query)
-        print("Query 6 executed successfully")
-    except:
-        print("Query 6 failed to execute")
+        print("Executed successfully")
+    except SQLAlchemyError as e:
+        print(e.__dict__['orig'])
 
 
 def get_query7():
@@ -135,14 +137,15 @@ def get_query7():
     query = text(
         """
         DELETE FROM "Users"
-        WHERE name LIKE '%bek%' OR name LIKE '%gul%'
+        WHERE name LIKE '%gul%' OR name LIKE '%bek%' OR name LIKE '%Gul%' OR name LIKE '%Bek%'
         """
     )
     try:
         engine.execute(query)
-        print("Query 7 executed successfully")
-    except:
-        print("Query 7 failed to execute")
+        print("Executed successfully")
+    except SQLAlchemyError as e:
+        print(e.__dict__['orig'])
+
 
 def get_query8():
     query = text(
@@ -153,9 +156,9 @@ def get_query8():
     )
     try:
         engine.execute(query)
-        print("Query 8 executed successfully")
-    except:
-        print("Query 8 failed to execute")
+        print("Executed successfully")
+    except SQLAlchemyError as e:
+        print(e.__dict__['orig'])
 
 
 def get_query9():
@@ -178,7 +181,7 @@ def get_query10():
     # List the top 5 counties with the highest number of total patients recorded.
     query = text(
         """
-        SELECT cname, MAX(total_patients)
+        SELECT cname
         FROM "Record"
         GROUP BY cname
         ORDER BY MAX(total_patients) DESC
@@ -193,7 +196,7 @@ def get_query11():
     # Group the diseases by disease type and the total number of patients treated
     query = text(
         """
-        SELECT DT.description, SUM(R.total_patients)
+        SELECT DT.description, SUM(R.total_patients) - SUM(R.total_deaths) AS recovered
         FROM "DiseaseType" DT JOIN "Disease" D ON DT.id = D.id
                               JOIN "Record" R ON R.disease_code = D.disease_code
         GROUP BY DT.description
@@ -202,15 +205,27 @@ def get_query11():
     df = pd.read_sql(query, engine)
     return print(df)
 
+
 if __name__ == "__main__":
-    # get_query1()
+    print("\nQuery 1\n")
+    get_query1()
+    print("\nQuery 2\n")
     get_query2()
-    # get_query3()
-    # get_query4()
-    # get_query5()
-    # get_query6()
-    # get_query7()
-    # get_query8()
-    # get_query9()
-    # get_query10()
-    # get_query11()
+    print("\nQuery 3\n")
+    get_query3()
+    print("\nQuery 4\n")
+    get_query4()
+    print("\nQuery 5\n")
+    get_query5()
+    print("\nQuery 6\n")
+    get_query6()
+    print("\nQuery 7\n")
+    get_query7()
+    print("\nQuery 8\n")
+    get_query8()
+    print("\nQuery 9\n")
+    get_query9()
+    print("\nQuery 10\n")
+    get_query10()
+    print("\nQuery 11\n")
+    get_query11()
