@@ -4,13 +4,8 @@ import time
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from dateutil.parser import parse
+from PIL import Image
 
-# tables listed in the database
-all_tables = (
-    'DiseaseType', 'Country', 'Disease',
-    'Discover', 'Users', 'PublicServant',
-    'Doctor', 'Specialize', 'Record', 
-)
 
 # lists containing primary keys for each table
 primary_keys = {
@@ -149,6 +144,16 @@ def format_columns(columns):
 
 if __name__ == '__main__':
 
+    db_schema =   st.secrets["db_schema"]
+    db_username = st.secrets['db_username']
+    db_password = st.secrets['db_password']
+    db_host =     st.secrets['db_host']
+    db_name =     st.secrets['db_name']
+    engine = create_engine(
+        f"postgresql://{db_username}:{db_password}@{db_host}:5432/{db_name}",
+        connect_args={'options': f'-csearch_path={db_schema}'}
+    )
+
     page_title = "CSCI 341 Assignment 2"
     page_icon = ":underage:"
     layout = "centered"
@@ -156,32 +161,25 @@ if __name__ == '__main__':
     st.set_page_config(page_title=page_title, page_icon=page_icon, layout=layout)
     st.title(page_title + " " + page_icon)
 
-    # creating PostgreSQL client
-    db_schema = "assignment"
-    db_username = st.secrets['db_username']
-    db_password = st.secrets['db_password']
-    engine = create_engine(
-        f"postgresql://{db_username}:{db_password}@127.0.0.1:5432/postgres",
-        connect_args={'options': f'-csearch_path={db_schema}'}
-    )
-    
+    # creating PostgreSQL client    
     st.sidebar.write(
         """
         This is a simple database management system that allows you to perform
         basic CRUD operations on the tables in the database. The database
         contains information about diseases, doctors, public servants, and
-        countries. First, select a table from the sidebar.
+        countries.First, select a table from the sidebar:
         """
     )
-    st.sidebar.markdown("---")
-    table = st.sidebar.selectbox('Select the table:', primary_keys.keys())
+    table = st.sidebar.selectbox("", primary_keys.keys(), label_visibility="collapsed")
+    image = Image.open('media/crying_nigga.jpg')
+    st.sidebar.image(image)
     st.subheader(f'{table}:')
     df = read_table_df(engine, table)
 
     st.dataframe(df, use_container_width=True)
 
     with st.form("update_form"):
-        st.write("Enter the primary keys of the record to update.")
+        st.write("Select the primary keys of the record to update.")
         num_keys = len(primary_keys[table])
         key_columns = st.columns(num_keys)
         key_values = {}
@@ -189,7 +187,9 @@ if __name__ == '__main__':
             with key_columns[i]:
                 key_values[key] = st.selectbox(f"{key}:", set(df[key]))
 
-        st.write("Choose the attributes to update. You may leave some blank.")
+        st.write("""
+            Fill the non-key fields of the record to update.
+            You may leave some fields empty.""")
         non_keys = set(df.columns) - set(primary_keys[table])
         non_key_values = {}
         for non_key in non_keys:
@@ -209,11 +209,9 @@ if __name__ == '__main__':
                 st.error("No non-key values specified")
             elif update_record(engine, table, key_str, non_key_str):
                 st.success("Record updated successfully!", icon="✅")
-                time.sleep(3)
-                st.experimental_rerun()
 
     with st.form("create_form"):
-        st.write("Create a new record")
+        st.write("Fill the fields of the record to create.")
         n_columns = len(df.columns)
         columns = {}
         for column_name in df.columns:
@@ -226,11 +224,9 @@ if __name__ == '__main__':
                 st.error("No values specified")
             elif create_record(engine, table, record):
                 st.success("Record created successfully!", icon="✅")
-                time.sleep(3)
-                st.experimental_rerun()
 
     with st.form("delete_form"):
-        st.write("In this table you can delete a record")
+        st.write("Select the primary keys of the record to delete.")
         n_keys = len(primary_keys[table])
         key_values = {}
         key_columns = st.columns(n_keys)
@@ -243,5 +239,3 @@ if __name__ == '__main__':
             keys_str = " AND ".join([f"{key}={key_values[key]}" for key in primary_keys[table]])
             if delete_record(engine, table, keys_str):
                 st.success("Record deleted successfully!", icon="✅")
-                time.sleep(3)
-                st.experimental_rerun()
