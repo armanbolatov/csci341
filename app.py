@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
 import datetime
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from dateutil.parser import parse
 from PIL import Image
+from st_aggrid import AgGrid, GridOptionsBuilder
+from st_aggrid.shared import GridUpdateMode
 
 
 # lists containing primary keys for each table
@@ -34,6 +35,29 @@ foreign_keys = {
                       'cname': 'Country',
                       'disease_code': 'Disease'},
 }
+
+
+def aggrid_interactive_table(df: pd.DataFrame):
+    """
+    Creates an st-aggrid interactive table based on a dataframe.
+
+    :param df: pandas DataFrame
+    """
+    options = GridOptionsBuilder.from_dataframe(
+        df, enableRowGroup=True, enableValue=True, enablePivot=True
+    )
+    options.configure_side_bar()
+    options.configure_selection("single")
+    selection = AgGrid(
+        df,
+        enable_enterprise_modules=True,
+        gridOptions=options.build(),
+        theme='streamlit',
+        fit_columns_on_grid_load=True,
+        update_mode=GridUpdateMode.MODEL_CHANGED,
+        allow_unsafe_jscode=True,
+    )
+    return selection
 
 
 def create_record(engine, table, record):
@@ -172,6 +196,10 @@ if __name__ == '__main__':
         contains information about diseases, doctors, public servants, and
         countries. First, select a table from the sidebar. Then, you can
         see the table's contents in the main panel.
+
+        The table is interactive, meaning that you can select a record and
+        the __update__ and __delete__ forms' primary key fields will update
+        accordingly.
         """
     )
     st.subheader(f'{table}:')
@@ -179,7 +207,8 @@ if __name__ == '__main__':
     # show the table as a dataframe and save its data types
     df = read_table_df(engine, table) 
     dtypes = df.dtypes
-    st.dataframe(df, use_container_width=True)
+    selection = aggrid_interactive_table(df=df)
+    # st.dataframe(df, use_container_width=True)
 
     with st.form("update_form"):
         st.write("Select the primary keys of the record to update.")
@@ -195,7 +224,12 @@ if __name__ == '__main__':
         if not disabled:
             for i, key in enumerate(primary_keys[table]):
                 with key_columns[i]:
-                    key_values[key] = st.selectbox(f"{key}:", set(df[key]))
+                    selected_index = 0
+                    options = list(set(df[key]))
+                    if selection["selected_rows"]:
+                        selected_key = selection["selected_rows"][0][key]
+                        selected_index = options.index(selected_key)
+                    key_values[key] = st.selectbox(f"{key}:", options, index=selected_index)
             st.write("""
             Fill the non-key fields of the record to update.
             You may leave some fields empty.""")
@@ -238,7 +272,12 @@ if __name__ == '__main__':
         key_columns = st.columns(n_keys)
         for i, key in enumerate(primary_keys[table]):
             with key_columns[i]:
-                key_values[key] = st.selectbox(f"{key}:", df[key])
+                selected_index = 0
+                options = list(set(df[key]))
+                if selection["selected_rows"]:
+                    selected_key = selection["selected_rows"][0][key]
+                    selected_index = options.index(selected_key)
+                key_values[key] = st.selectbox(f"{key}:", options, index=selected_index)
         submitted = st.form_submit_button("Delete")
         if submitted:
             key_values = format_columns(key_values, dtypes)
